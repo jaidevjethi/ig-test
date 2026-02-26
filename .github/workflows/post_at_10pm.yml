@@ -3,7 +3,7 @@ name: Scheduled Instagram Post
 on:
   schedule:
     # 22:42 IST = 17:12 UTC
-    - cron: '12 17 * * *'
+    - cron: '16 17 * * *'
   workflow_dispatch:
 
 jobs:
