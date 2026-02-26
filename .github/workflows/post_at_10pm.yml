@@ -2,13 +2,14 @@ name: Scheduled Instagram Post
 
 on:
   schedule:
-    # 22:00 IST is 16:30 UTC
-    - cron: '30 16 * * *'
-  workflow_dispatch: # Allows manual trigger for testing
+    # 22:42 IST = 17:12 UTC
+    - cron: '12 17 * * *'
+  workflow_dispatch:
 
 jobs:
   publish:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -19,9 +20,14 @@ jobs:
           python-version: '3.11'
 
       - name: Install Dependencies
-        run: pip install requests
+        run: |
+          pip install requests
+
+      - name: Show Current Time (Debug)
+        run: date -u
 
       - name: Execute Publication Script
         env:
           INSTAGRAM_TOKEN: ${{ secrets.INSTAGRAM_TOKEN }}
-        run: python scheduled_posts/patient_trust/publish.py
+        run: |
+          python scheduled_posts/patient_trust/publish.py
