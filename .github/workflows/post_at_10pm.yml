@@ -1,0 +1,27 @@
+name: Scheduled Instagram Post
+
+on:
+  schedule:
+    # 22:00 IST is 16:30 UTC
+    - cron: '30 16 * * *'
+  workflow_dispatch: # Allows manual trigger for testing
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: pip install requests
+
+      - name: Execute Publication Script
+        env:
+          INSTAGRAM_TOKEN: ${{ secrets.INSTAGRAM_TOKEN }}
+        run: python scheduled_posts/patient_trust/publish.py
