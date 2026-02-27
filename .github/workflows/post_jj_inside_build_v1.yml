@@ -1,0 +1,20 @@
+name: Post Campaign jj_inside_build_v1
+
+on:
+  schedule:
+    - cron: '30 15 * * *'
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout ig-test
+        uses: actions/checkout@v4
+
+      - name: Publish to Instagram
+        uses: jaidevjethi/instagram-publish-action@v1
+        with:
+          campaign_path: 'scheduled_posts/jj_inside_build_v1'
+          ig_user_id: ${{ secrets.IG_USER_ID }}
+          facebook_access_token: ${{ secrets.FACEBOOK_ACCESS_TOKEN }}
