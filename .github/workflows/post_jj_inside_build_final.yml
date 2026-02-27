@@ -3,6 +3,7 @@ name: Schedule Post jj_inside_build_final
 on:
   schedule:
     - cron: '55 16 27 2 *'
+  workflow_dispatch:
 
 jobs:
   publish_and_cleanup:
