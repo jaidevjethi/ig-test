@@ -6,7 +6,7 @@ import sys
 # --- CONFIGURATION ---
 CLIENT_ID = "jaidev_jethi"
 # Local paths in GitHub Runner environment
-IMAGE_DIR = "g_mas_jj_inside_build_v1"
+IMAGE_DIR = "scheduled_posts/jj_inside_build_v1"
 CAPTION_FILE = "scheduled_posts/inside_build/caption.txt"
 
 # --- HARDCODED CREDENTIALS (SOP for simple stand-alone GH scripts) ---
