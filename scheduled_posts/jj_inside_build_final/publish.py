@@ -72,7 +72,8 @@ def publish():
             container_ids.append(res["id"])
             print(f"    ✓ ID: {res['id']}")
         else:
-            print(f"    ❌ Error: {res}")
+            print(f"    ❌ Error creating container for {img}:")
+            print(f"    Response: {res}")
             sys.exit(1)
 
     # 2. Assemble Carousel
