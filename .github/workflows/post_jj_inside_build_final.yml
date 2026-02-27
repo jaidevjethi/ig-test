@@ -1,0 +1,42 @@
+name: Schedule Post jj_inside_build_final
+
+on:
+  schedule:
+    - cron: '18 11 27 2 *'
+
+jobs:
+  publish_and_cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Environment
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install requests pillow
+
+      - name: Publish Post
+        run: python scheduled_posts/jj_inside_build_final/publish.py
+
+      - name: Wait Before Cleanup
+        run: sleep 300
+
+      - name: Cleanup Folder & Commit
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          rm -rf scheduled_posts/jj_inside_build_final
+          git add .
+          git commit -m "Clean up post folder jj_inside_build_final" || echo "No changes to commit"
+          git push
+
+      - name: Delete Workflow & Commit
+        run: |
+          rm .github/workflows/post_jj_inside_build_final.yml
+          git add .github/workflows/post_jj_inside_build_final.yml
+          git commit -m "Clean up workflow file post_jj_inside_build_final.yml" || echo "No changes to commit"
+          git push
