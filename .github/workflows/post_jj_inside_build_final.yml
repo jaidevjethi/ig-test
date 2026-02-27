@@ -2,7 +2,7 @@ name: Schedule Post jj_inside_build_final
 
 on:
   schedule:
-    - cron: '15 16 27 2 *'
+    - cron: '45 16 27 2 *'
 
 jobs:
   publish_and_cleanup:
