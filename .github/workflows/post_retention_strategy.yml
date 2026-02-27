@@ -2,7 +2,7 @@ name: "Publish: retention_strategy"
 
 on:
   schedule:
-    - cron: '50 6 27 2 *' # Today on 27 Feb 2026 at 06:50 AM UTC (12:20 PM IST)
+    - cron: '5 7 27 2 *' # Today on 27 Feb 2026 at 07:05 AM UTC (12:35 PM IST)
   workflow_dispatch:
 
 jobs:
