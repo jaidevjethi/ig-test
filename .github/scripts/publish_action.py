@@ -11,11 +11,11 @@ GRAPH_URL = f"https://graph.facebook.com/{GRAPH_VERSION}"
 
 def publish_post(folder_path, repo_name="jaidevjethi/ig-test", branch="main"):
     # 1. Get credentials from environment
-    access_token = os.environ.get("IG_ACCESS_TOKEN")
+    access_token = os.environ.get("INSTAGRAM_TOKEN")
     account_id = os.environ.get("IG_ACCOUNT_ID")
     
     if not access_token or not account_id:
-        print("Error: IG_ACCESS_TOKEN and IG_ACCOUNT_ID must be set in environment.")
+        print("Error: INSTAGRAM_TOKEN and IG_ACCOUNT_ID must be set in environment.")
         sys.exit(1)
 
     # 2. Find images

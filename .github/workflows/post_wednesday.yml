@@ -22,6 +22,6 @@ jobs:
 
       - name: Publish to Instagram
         env:
-          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          INSTAGRAM_TOKEN: ${{ secrets.INSTAGRAM_TOKEN }}
           IG_ACCOUNT_ID: ${{ secrets.IG_ACCOUNT_ID }}
         run: python .github/scripts/publish_action.py --folder "scheduled_posts/Post_03_Profile_vs_Reputation_System_(Gujarati)"
