@@ -1,0 +1,27 @@
+name: "Post 2 (Monday): The 4-Step Decision Funnel"
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '30 13 30 3 *' # 13:30 UTC = 19:00 IST on Monday March 30
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Publish to Instagram
+        env:
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          IG_ACCOUNT_ID: ${{ secrets.IG_ACCOUNT_ID }}
+        run: python .github/scripts/publish_action.py --folder "scheduled_posts/Post_02_The_4_Step_Patient_Decision_Funnel"

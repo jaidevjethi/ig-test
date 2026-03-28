@@ -1,0 +1,27 @@
+name: "Post 1 (Saturday): The Services Section"
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '15 14 28 3 *' # 14:15 UTC = 19:45 IST on March 28 (approx 45 mins from now)
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Publish to Instagram
+        env:
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          IG_ACCOUNT_ID: ${{ secrets.IG_ACCOUNT_ID }}
+        run: python .github/scripts/publish_action.py --folder "scheduled_posts/Post_01_The_Services_Section_Nobody_Fills_Out"
