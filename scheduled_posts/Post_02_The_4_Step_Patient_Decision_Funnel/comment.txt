@@ -1,1 +1,0 @@
-Most doctors wait for the patient to call. But the decision was made 3 steps before that. I build systems that catch patients at step 1 and hold them until step 4. Comment 'AUDIT' to see where your patient funnel is leaking.

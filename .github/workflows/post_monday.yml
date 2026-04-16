@@ -3,7 +3,7 @@ name: "Post 2 (Monday): The 4-Step Decision Funnel"
 on:
   workflow_dispatch:
   schedule:
-    - cron: '30 13 30 3 *' # 13:30 UTC = 19:00 IST on Monday March 30
+    - cron: '30 13 20 4 *' # 13:30 UTC = 19:00 IST on Monday April 20
 
 jobs:
   publish:
@@ -23,4 +23,4 @@ jobs:
       - name: Publish to Instagram
         env:
           INSTAGRAM_TOKEN: ${{ secrets.INSTAGRAM_TOKEN }}
-        run: python .github/scripts/publish_action.py --folder "scheduled_posts/Post_02_The_4_Step_Patient_Decision_Funnel"
+        run: python .github/scripts/publish_action.py --folder "scheduled_posts/Post_02_The_Nearest_Paradox"
