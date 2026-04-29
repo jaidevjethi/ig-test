@@ -3,7 +3,7 @@ name: Instagram Scheduler
 on:
   schedule:
     # Runs at 15:00 UTC (8:30 PM IST) on Tuesday, Thursday, and Saturday
-    - cron: '0 15 * * 2,4,6'
+    - cron: '0 15 * * *'
   workflow_dispatch:
     # Allows manual triggering for testing
 

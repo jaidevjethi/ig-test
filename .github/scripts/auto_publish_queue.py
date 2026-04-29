@@ -76,7 +76,7 @@ Comment AUDIT below and I'll send you the details. 👇"""
 
     if not TOKEN or not ACCOUNT_ID:
         print("❌ Missing required environment variables (IG_ACCESS_TOKEN, IG_ACCOUNT_ID).")
-        return
+        sys.exit(1)
 
     # Create containers
     container_ids = []
@@ -92,7 +92,7 @@ Comment AUDIT below and I'll send you the details. 👇"""
             print(f"  ✓ {fname} → {res['id']}")
         else:
             print(f"  ❌ {fname} failed: {res}")
-            return
+            sys.exit(1)
 
     # Assemble carousel
     print("\nAssembling carousel...")
@@ -101,7 +101,7 @@ Comment AUDIT below and I'll send you the details. 👇"""
     res = r.json()
     if "id" not in res:
         print(f"❌ Assembly failed: {res}")
-        return
+        sys.exit(1)
     creation_id = res["id"]
 
     # Publish
@@ -111,7 +111,7 @@ Comment AUDIT below and I'll send you the details. 👇"""
     res = r.json()
     if "id" not in res:
         print(f"❌ Publish failed: {res}")
-        return
+        sys.exit(1)
 
     post_id = res["id"]
     permalink = requests.get(f"{GRAPH}/{post_id}?fields=permalink&access_token={TOKEN}").json().get("permalink", "N/A")
