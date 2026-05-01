@@ -1,0 +1,53 @@
+name: "Publish: EDU_03_Website_Speed_Fix_Free_Tools"
+
+on:
+  schedule:
+    - cron: '30 3 3 5 *' # Every day at 3:30 AM UTC (9:00 AM IST)
+  workflow_dispatch:
+
+jobs:
+  publish_post:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: pip install requests
+
+      - name: Publish Post & Comment
+        env:
+          INSTAGRAM_TOKEN: ${{ secrets.INSTAGRAM_TOKEN }}
+        run: python scheduled_posts/EDU_03_Website_Speed_Fix_Free_Tools/publish.py
+
+      - name: Wait Before Cleanup
+        run: sleep 300
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Delete Post Folder
+        run: rm -rf scheduled_posts/EDU_03_Website_Speed_Fix_Free_Tools
+
+      - name: Commit Folder Deletion
+        run: |
+          git add scheduled_posts/EDU_03_Website_Speed_Fix_Free_Tools
+          git commit -m "chore(cleanup): Remove scheduled post folder after publishing" || true
+
+      - name: Delete Workflow File
+        run: rm -f .github/workflows/post_EDU_03_Website_Speed_Fix_Free_Tools.yml
+
+      - name: Commit Workflow Deletion & Push
+        run: |
+          git add .github/workflows/post_EDU_03_Website_Speed_Fix_Free_Tools.yml
+          git commit -m "chore(cleanup): Remove scheduled post workflow" || true
+          git push origin main
