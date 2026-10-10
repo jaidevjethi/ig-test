@@ -1,0 +1,54 @@
+name: CareInflow publish
+
+# Publishes whatever is due in careinflow/queue/. One permanent workflow: posts
+# are queued as files, never as workflow files (the Actions token may not edit
+# workflows, which is why the old per-post workflows failed at cleanup).
+on:
+  schedule:
+    - cron: '7,37 * * * *'   # twice an hour; GitHub may run it late, so posts go out within about an hour of their time
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Only check the token and list the queue'
+        type: boolean
+        default: true
+      force_id:
+        description: 'Publish this post ID now, whatever its date (e.g. M01-W01-CAROUSEL-01)'
+        type: string
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: careinflow-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Publish due posts
+        env:
+          INSTAGRAM_TOKEN: ${{ secrets.INSTAGRAM_TOKEN }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'false' }}
+          FORCE_ID: ${{ inputs.force_id }}
+        run: node careinflow/publish.mjs
+
+      - name: Record what was published
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A careinflow
+          if ! git diff --cached --quiet; then
+            git commit -m "careinflow: published $(ls careinflow/published | tail -1 | sed 's/.json//')"
+            git push
+          fi
