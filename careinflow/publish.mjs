@@ -1,6 +1,7 @@
 /**
  * CareInflow scheduled publisher. Runs inside GitHub Actions in the public
- * staging repo (jaidevjethi/ig-test), every 30 minutes and on demand.
+ * staging repo (jaidevjethi/ig-test): early each day (then it waits for the post's
+ * minute), hourly as a backstop, and on demand.
  *
  * careinflow/queue/<ID>/post.json  { id, kind, publishAt (UTC ISO), caption, alt, images[] }
  * careinflow/queue/<ID>/01.jpg …   the slides; served to Instagram from raw.githubusercontent.com
@@ -12,6 +13,7 @@
  */
 import { readFileSync, readdirSync, existsSync, writeFileSync, rmSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
+import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
@@ -111,8 +113,11 @@ async function main() {
   const queueDir = join(ROOT, 'queue');
   const doneDir = join(ROOT, 'published');
   mkdirSync(doneDir, { recursive: true });
-  const queued = existsSync(queueDir) ? readdirSync(queueDir).filter((d) => existsSync(join(queueDir, d, 'post.json'))) : [];
-  const posts = queued.map((d) => JSON.parse(readFileSync(join(queueDir, d, 'post.json'), 'utf8'))).sort((a, b) => a.publishAt.localeCompare(b.publishAt));
+  const load = () => {
+    const queued = existsSync(queueDir) ? readdirSync(queueDir).filter((d) => existsSync(join(queueDir, d, 'post.json'))) : [];
+    return queued.map((d) => JSON.parse(readFileSync(join(queueDir, d, 'post.json'), 'utf8'))).sort((a, b) => a.publishAt.localeCompare(b.publishAt));
+  };
+  let posts = load();
   let now = Date.now();
   // GitHub starts scheduled runs late and irregularly; an early run waits for the exact minute.
   const next = posts.find((p) => !existsSync(join(doneDir, `${p.id}.json`)) && Date.parse(p.publishAt) > now);
@@ -123,6 +128,14 @@ async function main() {
       log(`waiting ${Math.round(ms / 60000)} min for ${next.id} at ${next.publishAt}`);
       await sleep(ms + 2000);
       now = Date.now();
+      // The checkout is hours old by now: a post edited, re-timed or withdrawn meanwhile must win.
+      try {
+        execSync(`git pull --ff-only --quiet origin ${BRANCH}`, { cwd: ROOT, stdio: 'pipe' });
+        posts = load();
+        log('queue refreshed after waiting');
+      } catch (e) {
+        throw new Error(`could not refresh the queue after waiting; publishing nothing (${String(e.message).split('\n')[0]})`);
+      }
     }
   }
   const due = posts.filter((p) => (FORCE ? p.id === FORCE : Date.parse(p.publishAt) <= now) && !existsSync(join(doneDir, `${p.id}.json`)));
