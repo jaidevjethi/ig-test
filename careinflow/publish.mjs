@@ -24,6 +24,8 @@ const BRANCH = process.env.GITHUB_REF_NAME ?? 'main';
 const config = JSON.parse(readFileSync(join(ROOT, 'config.json'), 'utf8'));
 const IG = config.igUserId;
 const MAX_PER_RUN = 2;
+// Wait mode: if the next post is due within this many minutes, sleep until it is due.
+const WAIT_MAX_MIN = Number(process.env.WAIT_MAX_MIN ?? 0);
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
@@ -111,7 +113,18 @@ async function main() {
   mkdirSync(doneDir, { recursive: true });
   const queued = existsSync(queueDir) ? readdirSync(queueDir).filter((d) => existsSync(join(queueDir, d, 'post.json'))) : [];
   const posts = queued.map((d) => JSON.parse(readFileSync(join(queueDir, d, 'post.json'), 'utf8'))).sort((a, b) => a.publishAt.localeCompare(b.publishAt));
-  const now = Date.now();
+  let now = Date.now();
+  // GitHub starts scheduled runs late and irregularly; an early run waits for the exact minute.
+  const next = posts.find((p) => !existsSync(join(doneDir, `${p.id}.json`)) && Date.parse(p.publishAt) > now);
+  const overdue = posts.some((p) => !existsSync(join(doneDir, `${p.id}.json`)) && Date.parse(p.publishAt) <= now);
+  if (!FORCE && !DRY && !overdue && next && WAIT_MAX_MIN > 0) {
+    const ms = Date.parse(next.publishAt) - now;
+    if (ms <= WAIT_MAX_MIN * 60000) {
+      log(`waiting ${Math.round(ms / 60000)} min for ${next.id} at ${next.publishAt}`);
+      await sleep(ms + 2000);
+      now = Date.now();
+    }
+  }
   const due = posts.filter((p) => (FORCE ? p.id === FORCE : Date.parse(p.publishAt) <= now) && !existsSync(join(doneDir, `${p.id}.json`)));
   log(`${posts.length} queued, ${due.length} due${FORCE ? ` (forced: ${FORCE})` : ''}`);
   for (const p of posts) log(`  ${p.id}  ${p.publishAt}  ${p.kind}  ${p.images.length} image(s)`);
