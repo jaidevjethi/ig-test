@@ -10,6 +10,11 @@
  * Env: INSTAGRAM_TOKEN (Actions secret), DRY_RUN ("true" = check token and list only),
  *      FORCE_ID (publish this one post now, whatever its date).
  * The token is only ever sent in request bodies, never in a URL or a log line.
+ *
+ * Never twice: a run that waited in the concurrency queue may start from an old
+ * commit, so the queue is pulled before anything is read, and every post is
+ * checked against the account's latest captions before it is made. A post that
+ * is already live is recorded as published and not posted again.
  */
 import { readFileSync, readdirSync, existsSync, writeFileSync, rmSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
@@ -104,11 +109,32 @@ async function publish(post) {
   return { mediaId, permalink };
 }
 
+/** Captions compare by their words, not their whitespace: Instagram may normalise line breaks. */
+const words = (s) => String(s ?? '').replace(/\s+/g, ' ').trim();
+let recent = null;
+
+/** The live post that already carries this caption, if any (the account's latest 12 are checked). */
+async function alreadyLive(post) {
+  recent ??= (await graph('GET', `${IG}/media`, { fields: 'caption,permalink,timestamp', limit: '12' })).data ?? [];
+  const mine = words(post.caption);
+  return recent.find((m) => {
+    const theirs = words(m.caption);
+    return theirs === mine || (mine.length > 160 && theirs.slice(0, 160) === mine.slice(0, 160));
+  });
+}
+
 async function main() {
   if (!TOKEN) throw new Error('INSTAGRAM_TOKEN is not set');
   const me = await graph('GET', IG, { fields: 'username' });
   if (me.username !== config.expectUsername) throw new Error(`token is for @${me.username}, expected @${config.expectUsername}; refusing to post`);
   log(`token ok for @${me.username}`);
+
+  // A run that queued behind another starts from the commit it was created at; read the branch as it is now.
+  try {
+    execSync(`git pull --ff-only --quiet origin ${BRANCH}`, { cwd: ROOT, stdio: 'pipe' });
+  } catch (e) {
+    log(`could not pull ${BRANCH} at start (${String(e.message).split('\n')[0]}); the duplicate check still applies`);
+  }
 
   const queueDir = join(ROOT, 'queue');
   const doneDir = join(ROOT, 'published');
@@ -142,10 +168,24 @@ async function main() {
   log(`${posts.length} queued, ${due.length} due${FORCE ? ` (forced: ${FORCE})` : ''}`);
   for (const p of posts) log(`  ${p.id}  ${p.publishAt}  ${p.kind}  ${p.images.length} image(s)`);
   if (FORCE && !due.length) throw new Error(`${FORCE} is not in the queue (or already published)`);
-  if (DRY) return log('dry run: nothing published');
+  if (DRY) {
+    for (const p of due) {
+      const live = await alreadyLive(p);
+      log(`  due: ${p.id}${live ? ` (already on Instagram: ${live.permalink}; would be recorded, not posted)` : ''}`);
+    }
+    return log('dry run: nothing published');
+  }
 
   let failures = 0;
   for (const post of due.slice(0, MAX_PER_RUN)) {
+    // If this check cannot run, publish nothing: the hourly backstop retries, a duplicate cannot be undone.
+    const live = await alreadyLive(post);
+    if (live) {
+      writeFileSync(join(doneDir, `${post.id}.json`), JSON.stringify({ id: post.id, mediaId: live.id, permalink: live.permalink, publishedAt: new Date(String(live.timestamp).replace(/([+-]\d\d)(\d\d)$/, '$1:$2')).toISOString(), scheduledFor: post.publishAt, note: 'found already live; not posted again' }, null, 2) + '\n');
+      rmSync(join(queueDir, post.id), { recursive: true, force: true });
+      log(`  = ${post.id} is already on Instagram (${live.permalink}); recorded, not posted again`);
+      continue;
+    }
     log(`publishing ${post.id}`);
     try {
       const r = await publish(post);

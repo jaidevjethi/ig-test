@@ -5,7 +5,10 @@ name: CareInflow publish
 # workflows, which is why the old per-post workflows failed at cleanup).
 on:
   schedule:
-    - cron: '0 2,3,4,5 * * *'   # 07:30–10:30 IST: early starts; the first to run waits for the 13:30 post
+    # Off the top of the hour, where GitHub drops the most scheduled runs (12 and 13 Oct
+    # went out an hour late). 08:11–12:11 IST: each is inside the 330-minute wait window,
+    # so whichever starts first waits for the 13:30 post.
+    - cron: '41 2,3,4,5,6 * * *'
     - cron: '17 * * * *'        # hourly backstop: publishes anything overdue
   workflow_dispatch:
     inputs:
@@ -34,7 +37,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 350
     steps:
+      # The branch as it is when the job starts, not the commit the run was created at:
+      # a run that queued behind the publishing one must see that day's post as done.
       - uses: actions/checkout@v4
+        with:
+          ref: main
 
       - uses: actions/setup-node@v4
         with:
