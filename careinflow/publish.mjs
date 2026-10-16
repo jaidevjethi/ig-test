@@ -3,7 +3,8 @@
  * staging repo (jaidevjethi/ig-test): early each day (then it waits for the post's
  * minute), hourly as a backstop, and on demand.
  *
- * careinflow/queue/<ID>/post.json  { id, kind, publishAt (UTC ISO), caption, alt, images[] }
+ * careinflow/queue/<ID>/post.json  { id, kind, publishAt (UTC ISO), caption, alt, images[], comment? }
+ *                                  comment: posted as the first comment once the post is live (pinned by hand)
  * careinflow/queue/<ID>/01.jpg …   the slides; served to Instagram from raw.githubusercontent.com
  * careinflow/published/<ID>.json   written after a successful publish; the queue folder is then removed
  *
@@ -109,6 +110,28 @@ async function publish(post) {
   return { mediaId, permalink };
 }
 
+/**
+ * The first comment: a contact line the owner pins in the app (the API cannot pin).
+ * The post is already live, so a failure here is logged, never retried as a publish.
+ */
+async function firstComment(mediaId, message) {
+  if (!message) return {};
+  for (let i = 0; i < 3; i++) {
+    try {
+      const { id } = await graph('POST', `${mediaId}/comments`, { message });
+      log(`  comment posted (${id}); pin it in the app`);
+      return { commentId: id };
+    } catch (e) {
+      const why = String(e.message).replaceAll(TOKEN, '<token>');
+      if (i === 2) {
+        log(`  ! comment not posted: ${why} (add it by hand and pin it)`);
+        return { commentError: why };
+      }
+      await sleep(10000);
+    }
+  }
+}
+
 /** Captions compare by their words, not their whitespace: Instagram may normalise line breaks. */
 const words = (s) => String(s ?? '').replace(/\s+/g, ' ').trim();
 let recent = null;
@@ -166,7 +189,7 @@ async function main() {
   }
   const due = posts.filter((p) => (FORCE ? p.id === FORCE : Date.parse(p.publishAt) <= now) && !existsSync(join(doneDir, `${p.id}.json`)));
   log(`${posts.length} queued, ${due.length} due${FORCE ? ` (forced: ${FORCE})` : ''}`);
-  for (const p of posts) log(`  ${p.id}  ${p.publishAt}  ${p.kind}  ${p.images.length} image(s)`);
+  for (const p of posts) log(`  ${p.id}  ${p.publishAt}  ${p.kind}  ${p.images.length} image(s)${p.comment ? '  + comment' : ''}`);
   if (FORCE && !due.length) throw new Error(`${FORCE} is not in the queue (or already published)`);
   if (DRY) {
     for (const p of due) {
@@ -189,7 +212,11 @@ async function main() {
     log(`publishing ${post.id}`);
     try {
       const r = await publish(post);
-      writeFileSync(join(doneDir, `${post.id}.json`), JSON.stringify({ id: post.id, ...r, publishedAt: new Date().toISOString(), scheduledFor: post.publishAt }, null, 2) + '\n');
+      const publishedAt = new Date().toISOString();
+      // Record the post before anything else can fail: a live post must never be retried.
+      writeFileSync(join(doneDir, `${post.id}.json`), JSON.stringify({ id: post.id, ...r, publishedAt, scheduledFor: post.publishAt }, null, 2) + '\n');
+      const c = await firstComment(r.mediaId, post.comment);
+      if (post.comment) writeFileSync(join(doneDir, `${post.id}.json`), JSON.stringify({ id: post.id, ...r, publishedAt, scheduledFor: post.publishAt, ...c }, null, 2) + '\n');
       rmSync(join(queueDir, post.id), { recursive: true, force: true });
       log(`  ✓ ${r.permalink}`);
     } catch (e) {

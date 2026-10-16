@@ -9,6 +9,10 @@ on:
     # went out an hour late). 08:11–12:11 IST: each is inside the 330-minute wait window,
     # so whichever starts first waits for the 13:30 post.
     - cron: '41 2,3,4,5,6 * * *'
+    # The English/Hindi slot, 20:30 IST: 15:11–19:11 IST, the same five-run net. On a day
+    # with no evening post, the next post is the next day's 13:30, far outside the window,
+    # so these runs exit at once.
+    - cron: '41 9,10,11,12,13 * * *'
     - cron: '17 * * * *'        # hourly backstop: publishes anything overdue
   workflow_dispatch:
     inputs:
@@ -62,7 +66,8 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add -A careinflow
           if ! git diff --cached --quiet; then
-            git commit -m "careinflow: published $(ls careinflow/published | tail -1 | sed 's/.json//')"
+            # Newest record, not the last by name: EN-/HI- IDs sort before M01-.
+            git commit -m "careinflow: published $(ls -t careinflow/published | head -1 | sed 's/.json//')"
             # A waiting run may finish after new posts were queued: rebase, never drop the record.
             for i in 1 2 3 4 5; do
               git pull --rebase origin main && git push origin HEAD:main && break
